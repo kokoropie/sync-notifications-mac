@@ -54,7 +54,7 @@ Mỗi bản phát hành đều được build tự động bằng GitHub Actions
 
 ## Tự cập nhật
 
-Menu bar → **Kiểm tra cập nhật…** (và tự kiểm tra mỗi 24 giờ khi mở app, tắt được trong Cài đặt). App tải DMG mới từ GitHub Releases, kiểm tra chữ ký, thay thế chính nó rồi mở lại. Vì file do chính app tải nên **không bị gắn cờ quarantine** và Gatekeeper không hỏi lại: chỉ cần vượt Gatekeeper một lần ở lần cài đầu. Nếu app ký bằng chứng chỉ cố định (xem dưới), bản mới bắt buộc phải cùng chứng chỉ, nếu không sẽ bị từ chối.
+Menu bar → **Kiểm tra cập nhật…** (và tự kiểm tra mỗi 24 giờ khi mở app, tắt được trong Cài đặt). App tải DMG mới từ GitHub Releases, kiểm tra chữ ký, thay thế chính nó rồi mở lại. Vì file do chính app tải nên **không bị gắn cờ quarantine** và Gatekeeper không hỏi lại: chỉ cần vượt Gatekeeper một lần ở lần cài đầu. Nếu app ký bằng chứng chỉ cố định (xem dưới), bản mới bắt buộc phải cùng chứng chỉ, nếu không sẽ bị từ chối. Cần repo có thể đọc công khai trên GitHub; nếu repo private, kiểm tra cập nhật sẽ báo lỗi. App phải nằm ở thư mục bạn có quyền ghi (ví dụ `/Applications`).
 
 ## Về ký và công chứng (cho người phát hành)
 
@@ -119,3 +119,5 @@ Biến tùy chọn cho `build.sh`: `VERSION`, `UNIVERSAL=1`, `SIGN_IDENTITY="Dev
 - **Danh sách thông báo**: lịch sử nhóm theo app, có tìm kiếm và xóa theo nhóm.
 - **Whitelist app**: chọn app được hiện banner; dùng chung với Android theo account key.
 - Clipboard hai chiều với Android.
+- **Tự cập nhật** từ GitHub Releases (menu bar → Kiểm tra cập nhật…), xem [Tự cập nhật](#tự-cập-nhật).
+- Nhận **thông báo thử** từ nút "Gửi thông báo thử sang Mac" trên Android để kiểm tra kết nối.
