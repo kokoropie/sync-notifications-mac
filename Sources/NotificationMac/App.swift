@@ -18,6 +18,19 @@ struct NotificationMacApp: App {
         }
     }
 
+    private func showAbout() {
+        let credits = NSMutableAttributedString(
+            string: "Tác giả: Kaga Akatsuki\nLiên hệ: admin@kokoropie.info.vn",
+            attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.labelColor])
+        if let r = credits.string.range(of: "admin@kokoropie.info.vn") {
+            credits.addAttribute(.link, value: URL(string: "mailto:admin@kokoropie.info.vn")!, range: NSRange(r, in: credits.string))
+        }
+        let para = NSMutableParagraphStyle(); para.alignment = .center
+        credits.addAttribute(.paragraphStyle, value: para, range: NSRange(location: 0, length: credits.length))
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Sync Notification", .credits: credits])
+    }
+
     var body: some Scene {
         MenuBarExtra("Sync Notification", systemImage: client.connected ? "bell.badge" : "bell.slash") {
             Text(client.connected ? "Đã kết nối" : "Mất kết nối")
