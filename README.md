@@ -110,7 +110,7 @@ Biến tùy chọn cho `build.sh`: `VERSION`, `UNIVERSAL=1`, `SIGN_IDENTITY="Dev
 
 - Dùng script: `./scripts/release.sh 1.0.0` (hoặc `patch` / `minor` / `major` để tăng từ tag mới nhất; thêm `-n` để chạy thử không tạo tag). Script kiểm tra đang ở `main`, không còn thay đổi chưa commit, đã đồng bộ `origin/main`, rồi tạo tag `v1.0.0` và push.
 - Hoặc thủ công: push tag dạng `v*` → workflow build DMG và đăng lên Releases.
-- Pull request hoặc chạy tay (`workflow_dispatch`) → build DMG, lưu ở mục Artifacts, không phát hành.
+- Chạy tay (`workflow_dispatch`) → build DMG, lưu ở mục Artifacts, không phát hành.
 
 ## Tính năng
 
