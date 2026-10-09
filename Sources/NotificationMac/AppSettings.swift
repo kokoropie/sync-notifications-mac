@@ -45,6 +45,7 @@ final class AppSettings: ObservableObject {
 
     func allows(_ pkg: String?) -> Bool {
         guard whitelistEnabled, let pkg else { return true }
+        if pkg == "com.kokoropie.notification" { return true } // thông báo thử của chính app
         return whitelist.contains(pkg)
     }
 
