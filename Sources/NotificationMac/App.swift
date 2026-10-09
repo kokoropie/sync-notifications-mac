@@ -38,6 +38,8 @@ struct NotificationMacApp: App {
             Divider()
             Button("Cài đặt…") { show("settings") }
                 .keyboardShortcut(",")
+            Button("Giới thiệu") { showAbout() }
+            Divider()
             Button("Thoát") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
