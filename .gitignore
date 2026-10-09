@@ -1,2 +1,6 @@
 .build
 build
+
+# Chứng chỉ ký (tạo bởi scripts/make-cert.sh), tuyệt đối không commit
+*.p12
+*.pem
