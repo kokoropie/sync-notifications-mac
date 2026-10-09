@@ -13,6 +13,7 @@ struct SettingsView: View {
 struct GeneralSettingsView: View {
     @ObservedObject var settings = AppSettings.shared
     @ObservedObject var client = ServerClient.shared
+    @AppStorage(Updater.autoCheckKey) private var autoCheckUpdates = true
 
     private var statusText: String {
         if client.connected { return "Đã kết nối" }
@@ -30,6 +31,7 @@ struct GeneralSettingsView: View {
             }
             Section {
                 Toggle("Đồng bộ clipboard", isOn: $settings.clipboardSync)
+                Toggle("Tự kiểm tra cập nhật", isOn: $autoCheckUpdates)
             }
             statusRow
         }

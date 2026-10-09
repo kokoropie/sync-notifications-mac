@@ -23,7 +23,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0-dev.${GITHUB_RUN_NUMBER}"; fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
-      # Tùy chọn: nếu đặt secrets bên dưới thì ký bằng Developer ID, không thì ký ad-hoc
+      # Tùy chọn: có secrets thì ký bằng Developer ID hoặc chứng chỉ tự ký cố định, không thì ký ad-hoc
       - name: Import signing certificate
         id: sign
         env:
@@ -39,7 +39,11 @@ jobs:
           security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPW" "$KC"
           security list-keychains -d user -s "$KC" login.keychain-db
-          ID=$(security find-identity -v -p codesigning "$KC" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/')
+          # chứng chỉ tự ký không "valid" (không có -v) nhưng codesign vẫn dùng được; ưu tiên Developer ID nếu có
+          ALL=$(security find-identity -p codesigning "$KC")
+          ID=$(echo "$ALL" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/' || true)
+          [[ -n "$ID" ]] || ID=$(echo "$ALL" | grep -E '^\s+[0-9]+\) ' | head -1 | sed -E 's/.*"(.*)".*/\1/')
+          [[ -n "$ID" ]] || { echo "Không tìm thấy identity ký trong chứng chỉ"; exit 1; }
           echo "identity=$ID" >> "$GITHUB_OUTPUT"
 
       - name: Build app (universal)
@@ -58,7 +62,7 @@ jobs:
 
       # Tùy chọn: công chứng (cần Apple Developer + secrets APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD)
       - name: Notarize
-        if: ${{ steps.sign.outputs.identity != '-' && env.APPLE_ID != '' }}
+        if: ${{ startsWith(steps.sign.outputs.identity, 'Developer ID') && env.APPLE_ID != '' }}
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}

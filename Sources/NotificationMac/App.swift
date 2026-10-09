@@ -3,10 +3,12 @@ import SwiftUI
 @main
 struct NotificationMacApp: App {
     @ObservedObject private var client = ServerClient.shared
+    @ObservedObject private var updater = Updater.shared
     @Environment(\.openWindow) private var openWindow
 
     init() {
         ServerClient.shared.start()
+        Task { @MainActor in Updater.shared.checkOnLaunch() }
     }
 
     /// App menu bar không có Dock nên phải tự kích hoạt app để cửa sổ nổi lên trước.
@@ -39,6 +41,8 @@ struct NotificationMacApp: App {
             Button("Cài đặt…") { show("settings") }
                 .keyboardShortcut(",")
             Button("Giới thiệu") { showAbout() }
+            Button("Kiểm tra cập nhật…") { Task { await updater.check(userInitiated: true) } }
+                .disabled(updater.busy)
             Divider()
             Button("Thoát") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")

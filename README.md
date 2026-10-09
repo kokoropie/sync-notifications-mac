@@ -24,7 +24,7 @@ Biểu tượng chuông có gạch chéo nghĩa là chưa kết nối được s
 
 ## Gatekeeper – cảnh báo "không xác minh được nhà phát triển"
 
-Bản phát hành mặc định chỉ được **ký ad-hoc** và **chưa công chứng (notarize)** bởi Apple, vì việc đó cần tài khoản Apple Developer trả phí. Vì vậy lần đầu mở, macOS Gatekeeper có thể báo:
+Bản phát hành chưa được **công chứng (notarize)** bởi Apple, vì việc đó cần tài khoản Apple Developer trả phí. Vì vậy lần đầu mở, macOS Gatekeeper có thể báo:
 
 > "Sync Notification" không thể mở vì Apple không thể kiểm tra phần mềm độc hại.
 > hoặc: "Sync Notification" bị hỏng và không thể mở.
@@ -52,15 +52,30 @@ xattr -dr com.apple.quarantine "/Applications/Sync Notification.app"
 ### Kiểm tra file tải về
 Mỗi bản phát hành đều được build tự động bằng GitHub Actions từ mã nguồn trong repo. Bạn có thể tự build để chắc chắn (xem bên dưới).
 
+## Tự cập nhật
+
+Menu bar → **Kiểm tra cập nhật…** (và tự kiểm tra mỗi 24 giờ khi mở app, tắt được trong Cài đặt). App tải DMG mới từ GitHub Releases, kiểm tra chữ ký, thay thế chính nó rồi mở lại. Vì file do chính app tải nên **không bị gắn cờ quarantine** và Gatekeeper không hỏi lại: chỉ cần vượt Gatekeeper một lần ở lần cài đầu. Nếu app ký bằng chứng chỉ cố định (xem dưới), bản mới bắt buộc phải cùng chứng chỉ, nếu không sẽ bị từ chối.
+
 ## Về ký và công chứng (cho người phát hành)
 
-| | Ký ad-hoc (mặc định) | Developer ID + công chứng |
-|---|---|---|
-| Cần Apple Developer (99 USD/năm) | Không | Có |
-| Cảnh báo Gatekeeper lần đầu | Có (phải làm theo mục trên) | Không |
-| Chạy được trên máy khác | Có, sau khi vượt Gatekeeper | Có, mở thẳng |
+| | Ad-hoc (mặc định) | Chứng chỉ tự ký cố định | Developer ID + công chứng |
+|---|---|---|---|
+| Cần Apple Developer (99 USD/năm) | Không | Không | Có |
+| Danh tính app giữ nguyên giữa các bản | Không | **Có** (không bị hỏi lại quyền thông báo) | Có |
+| Cảnh báo Gatekeeper khi tải thủ công | Có | Có | Không |
+| Tự cập nhật không hỏi Gatekeeper | Có | Có | Có |
 
-Nếu bạn là người quản lý repo và muốn phát hành bản không còn cảnh báo, thêm các secrets sau vào repo (Settings → Secrets and variables → Actions). Workflow `.github/workflows/release.yml` tự dùng chúng nếu có, và tự bỏ qua nếu thiếu:
+### Chứng chỉ tự ký cố định (khuyến nghị nếu không có Apple Developer)
+Chạy **một lần** trên máy bạn:
+
+```bash
+./scripts/make-cert.sh
+```
+
+Script tạo `sync-notification-cert.p12` (hiệu lực 10 năm), in `MACOS_CERT_PASSWORD` và copy `MACOS_CERT_P12_BASE64` vào clipboard. Thêm hai secret đó vào repo (Settings → Secrets and variables → Actions). **Giữ file .p12 ở nơi an toàn và đừng tạo lại**: đổi chứng chỉ thì bản mới có danh tính khác, tự cập nhật sẽ từ chối và người dùng phải cài lại tay một lần.
+
+### Developer ID + công chứng
+Thêm các secrets sau (workflow `.github/workflows/release.yml` tự dùng nếu có, tự bỏ qua nếu thiếu):
 
 | Secret | Nội dung |
 |---|---|
@@ -70,7 +85,7 @@ Nếu bạn là người quản lý repo và muốn phát hành bản không cò
 | `APPLE_TEAM_ID` | Team ID (10 ký tự) |
 | `APPLE_APP_PASSWORD` | [Mật khẩu dành riêng cho app](https://support.apple.com/102654) của Apple ID |
 
-Có hai `MACOS_CERT_*` thì app và DMG được ký Developer ID; thêm ba secret còn lại thì DMG được công chứng và staple.
+Có hai `MACOS_CERT_*` thì app và DMG được ký (Developer ID nếu chứng chỉ là Developer ID, ngược lại ký bằng chứng chỉ tự ký); thêm ba secret còn lại thì DMG Developer ID được công chứng và staple.
 
 ## Quyền riêng tư
 
@@ -89,7 +104,7 @@ VERSION=1.0.0 ./scripts/make-dmg.sh   # build/SyncNotification-1.0.0.dmg
 open build/NotificationMac.app
 ```
 
-Biến tùy chọn cho `build.sh`: `VERSION`, `UNIVERSAL=1`, `SIGN_IDENTITY="Developer ID Application: …"`.
+Biến tùy chọn cho `build.sh`: `VERSION`, `UNIVERSAL=1`, `SIGN_IDENTITY="Developer ID Application: …"` hoặc tên chứng chỉ tự ký.
 
 ## Phát hành bằng GitHub Actions
 

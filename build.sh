@@ -2,7 +2,7 @@
 # Build và đóng gói thành build/NotificationMac.app (cần bundle để dùng được UNUserNotificationCenter).
 #   UNIVERSAL=1  build cả arm64 + x86_64
 #   VERSION=1.2.3 ghi vào Info.plist
-#   SIGN_IDENTITY="Developer ID Application: ..." ký bằng chứng chỉ thật (mặc định ad-hoc "-")
+#   SIGN_IDENTITY="Developer ID Application: ..." hoặc tên chứng chỉ tự ký (mặc định ad-hoc "-")
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -27,7 +27,10 @@ fi
 IDENTITY="${SIGN_IDENTITY:--}"
 if [[ "$IDENTITY" == "-" ]]; then
   codesign --force --sign - "$APP"
-else
+elif [[ "$IDENTITY" == Developer\ ID* ]]; then
   codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
+else
+  # chứng chỉ tự ký cố định (xem scripts/make-cert.sh): danh tính không đổi giữa các bản build
+  codesign --force --sign "$IDENTITY" "$APP"
 fi
 echo "Built $APP  ->  open $APP"
