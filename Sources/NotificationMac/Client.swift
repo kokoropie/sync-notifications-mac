@@ -88,10 +88,11 @@ final class ServerClient: ObservableObject {
             .init(name: "deviceId", value: settings.deviceId),
             .init(name: "name", value: settings.deviceName),
             .init(name: "platform", value: "mac"),
+            .init(name: "encrypt", value: "1"),
         ]
         guard let url = comps.url else { return }
         task = session.webSocketTask(with: url)
-        task?.maximumMessageSize = 4 * 1024 * 1024
+        task?.maximumMessageSize = 32 * 1024 * 1024
         task?.resume()
         receive(gen)
     }
@@ -104,7 +105,8 @@ final class ServerClient: ObservableObject {
                 self.setStatus(false, err.localizedDescription)
                 self.scheduleReconnect(gen)
             case .success(let msg):
-                if case .string(let s) = msg { self.handle(s) }
+                // encrypt=1: server chỉ gửi frame binary đã mã hoá bằng Kaga
+                if case .data(let d) = msg, let s = Kaga.decode([UInt8](d), salt: Kaga.salt(for: self.settings.accountKey)) { self.handle(s) }
                 self.receive(gen)
             }
         }
@@ -129,7 +131,7 @@ final class ServerClient: ObservableObject {
             DispatchQueue.main.async { [self] in
                 self.pingTimer?.invalidate()
                 self.pingTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { [weak self] _ in
-                    self?.task?.send(.string("{\"kind\":\"ping\"}")) { _ in }
+                    self?.sendFrame("{\"kind\":\"ping\"}")
                 }
             }
             catchUp()
@@ -230,8 +232,13 @@ final class ServerClient: ObservableObject {
         lastSent = text
         let payload = ["kind": "clipboard", "text": text]
         if let d = try? JSONSerialization.data(withJSONObject: payload), let s = String(data: d, encoding: .utf8) {
-            task?.send(.string(s)) { _ in }
+            sendFrame(s)
         }
+    }
+
+    /// Mã hoá bằng Kaga rồi gửi dạng binary.
+    private func sendFrame(_ json: String) {
+        task?.send(.data(Data(Kaga.encode(json, salt: Kaga.salt(for: settings.accountKey))))) { _ in }
     }
 
     private func applyRemoteClipboard(_ text: String) {
