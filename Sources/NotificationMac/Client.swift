@@ -27,6 +27,12 @@ private struct WSMessage: Decodable {
 
 /// Kết nối WebSocket tới server, tự reconnect, đồng bộ clipboard hai chiều.
 final class ServerClient: ObservableObject {
+    /// Header đặc biệt để Cloudflare chỉ cho request từ app đi qua.
+    static let gateHeader = "X-Notification-Secret"
+    /// Giá trị do build.sh ghi vào Info.plist (GateSecret); chạy `swift run` thì lấy từ env NOTIFICATION_SECRET.
+    static let gateValue = (Bundle.main.object(forInfoDictionaryKey: "GateSecret") as? String)
+        ?? ProcessInfo.processInfo.environment["NOTIFICATION_SECRET"] ?? ""
+
     static let shared = ServerClient()
 
     @Published var connected = false
@@ -70,6 +76,7 @@ final class ServerClient: ObservableObject {
         r.httpMethod = method
         r.setValue("Bearer \(settings.accountKey)", forHTTPHeaderField: "Authorization")
         r.setValue(settings.deviceId, forHTTPHeaderField: "X-Device-Id")
+        r.setValue(Self.gateValue, forHTTPHeaderField: Self.gateHeader)
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
         return r
     }
@@ -91,7 +98,9 @@ final class ServerClient: ObservableObject {
             .init(name: "encrypt", value: "1"),
         ]
         guard let url = comps.url else { return }
-        task = session.webSocketTask(with: url)
+        var wsReq = URLRequest(url: url)
+        wsReq.setValue(Self.gateValue, forHTTPHeaderField: Self.gateHeader)
+        task = session.webSocketTask(with: wsReq)
         task?.maximumMessageSize = 32 * 1024 * 1024
         task?.resume()
         receive(gen)

@@ -51,6 +51,7 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
           BUILD_NUMBER: ${{ github.run_number }}
           SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
+          NOTIFICATION_SECRET: ${{ secrets.NOTIFICATION_SECRET }}
         run: ./build.sh
 
       - name: Make DMG

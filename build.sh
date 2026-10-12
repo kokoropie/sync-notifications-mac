@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build và đóng gói thành build/NotificationMac.app (cần bundle để dùng được UNUserNotificationCenter).
 #   UNIVERSAL=1  build cả arm64 + x86_64
+#   NOTIFICATION_SECRET=... (hoặc file .gate-secret) giá trị header X-Notification-Secret
 #   VERSION=1.2.3 ghi vào Info.plist
 #   SIGN_IDENTITY="Developer ID Application: ..." hoặc tên chứng chỉ tự ký (mặc định ad-hoc "-")
 set -euo pipefail
@@ -22,6 +23,15 @@ cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 if [[ -n "${VERSION:-}" ]]; then
   /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER:-$VERSION}" "$APP/Contents/Info.plist"
+fi
+
+# Header X-Notification-Secret: lấy từ env NOTIFICATION_SECRET hoặc file .gate-secret (không commit)
+GATE="${NOTIFICATION_SECRET:-}"
+[[ -z "$GATE" && -f .gate-secret ]] && GATE="$(tr -d '[:space:]' < .gate-secret)"
+if [[ -n "$GATE" ]]; then
+  /usr/libexec/PlistBuddy -c "Add :GateSecret string $GATE" "$APP/Contents/Info.plist"
+else
+  echo "WARN: thiếu NOTIFICATION_SECRET / .gate-secret, app sẽ không gửi được header" >&2
 fi
 
 IDENTITY="${SIGN_IDENTITY:--}"

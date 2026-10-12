@@ -4,3 +4,6 @@ build
 # Chứng chỉ ký (tạo bởi scripts/make-cert.sh), tuyệt đối không commit
 *.p12
 *.pem
+
+# Giá trị header X-Notification-Secret
+.gate-secret
