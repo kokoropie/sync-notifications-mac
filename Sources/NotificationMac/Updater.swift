@@ -8,6 +8,7 @@ final class Updater: ObservableObject {
     static let repo = "kokoropie/sync-notifications-mac"
     static let autoCheckKey = "autoCheckUpdates"
     private static let lastCheckKey = "lastUpdateCheck"
+    private static let updatedFromKey = "updatedFromVersion"
 
     @Published private(set) var busy = false
 
@@ -36,6 +37,15 @@ final class Updater: ObservableObject {
         if d.object(forKey: Self.autoCheckKey) as? Bool == false { return }
         if Date().timeIntervalSince1970 - d.double(forKey: Self.lastCheckKey) < 86_400 { return }
         Task { await check(userInitiated: false) }
+    }
+
+    /// Sau khi tự cập nhật và mở lại, báo một lần rằng đã lên bản mới.
+    func announceIfUpdated() {
+        let d = UserDefaults.standard
+        guard let old = d.string(forKey: Self.updatedFromKey) else { return }
+        d.removeObject(forKey: Self.updatedFromKey)
+        guard old != currentVersion else { return } // cài thất bại, vẫn là bản cũ
+        Notifier.shared.showUpdated(to: currentVersion)
     }
 
     func check(userInitiated: Bool) async {
@@ -133,6 +143,7 @@ final class Updater: ObservableObject {
         rm -rf "$3"
         """
         try sh.write(to: script, atomically: true, encoding: .utf8)
+        UserDefaults.standard.set(currentVersion, forKey: Self.updatedFromKey)
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/sh")
         p.arguments = [script.path, target.path, staged.path, work.path]

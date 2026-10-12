@@ -8,7 +8,17 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     func requestAuthorization() {
         let c = UNUserNotificationCenter.current()
         c.delegate = self
-        c.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        c.requestAuthorization(options: [.alert, .sound]) { _, _ in
+            Task { @MainActor in Updater.shared.announceIfUpdated() }
+        }
+    }
+
+    func showUpdated(to new: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Đã cập nhật thành công"
+        content.body = "Sync Notification đã lên phiên bản \(new)."
+        content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "app-updated", content: content, trigger: nil))
     }
 
     func show(_ event: ServerEvent, icon: URL?) {
