@@ -16,7 +16,7 @@ struct GeneralSettingsView: View {
     @AppStorage(Updater.autoCheckKey) private var autoCheckUpdates = true
 
     private var statusText: String {
-        if client.connected { return "Đã kết nối" }
+        if client.connected { return "Đã kết nối" + (client.serverVersion.map { " · v\($0)" } ?? "") }
         return client.lastError ?? "Chưa kết nối"
     }
 

@@ -20,6 +20,7 @@ struct ServerEvent: Codable, Identifiable, Equatable {
 
 private struct WSMessage: Decodable {
     let kind: String
+    let version: String?
     let text: String?
     let enabled: Bool?
     let packages: [String]?
@@ -37,6 +38,7 @@ final class ServerClient: ObservableObject {
 
     @Published var connected = false
     @Published var lastError: String?
+    @Published var serverVersion: String?
 
     private let settings = AppSettings.shared
     private var task: URLSessionWebSocketTask?
@@ -95,6 +97,7 @@ final class ServerClient: ObservableObject {
             .init(name: "deviceId", value: settings.deviceId),
             .init(name: "name", value: settings.deviceName),
             .init(name: "platform", value: "mac"),
+            .init(name: "version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"),
             .init(name: "encrypt", value: "1"),
         ]
         guard let url = comps.url else { return }
@@ -137,6 +140,7 @@ final class ServerClient: ObservableObject {
         case "hello":
             retry = 0
             setStatus(true, nil)
+            DispatchQueue.main.async { self.serverVersion = m.version }
             DispatchQueue.main.async { [self] in
                 self.pingTimer?.invalidate()
                 self.pingTimer = Timer.scheduledTimer(withTimeInterval: 25, repeats: true) { [weak self] _ in

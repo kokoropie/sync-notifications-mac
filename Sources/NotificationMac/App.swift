@@ -35,7 +35,7 @@ struct NotificationMacApp: App {
 
     var body: some Scene {
         MenuBarExtra("Sync Notification", systemImage: client.connected ? "bell.badge" : "bell.slash") {
-            Text(client.connected ? "Đã kết nối" : "Mất kết nối")
+            Text(client.connected ? "Đã kết nối" + (client.serverVersion.map { " · v\($0)" } ?? "") : "Mất kết nối")
             Button("Danh sách thông báo…") { show("history") }
             Divider()
             Button("Cài đặt…") { show("settings") }
