@@ -7,3 +7,5 @@ build
 
 # Giá trị header X-Notification-Secret
 .gate-secret
+
+.DS_Store
