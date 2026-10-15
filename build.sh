@@ -50,6 +50,12 @@ else
   echo "WARN: thiếu NOTIFICATION_SECRET / .gate-secret, app sẽ không gửi được header" >&2
 fi
 
+# Sentry DSN (công khai theo thiết kế, nhưng không hard-code trong repo): env SENTRY_DSN hoặc file .sentry-dsn
+# Để trống = tắt Sentry. KHÔNG đưa SENTRY_AUTH_TOKEN vào đây.
+SENTRY_DSN_VALUE="${SENTRY_DSN:-}"
+[[ -z "$SENTRY_DSN_VALUE" && -f .sentry-dsn ]] && SENTRY_DSN_VALUE="$(tr -d '[:space:]' < .sentry-dsn)"
+[[ -n "$SENTRY_DSN_VALUE" ]] && /usr/libexec/PlistBuddy -c "Add :SentryDSN string $SENTRY_DSN_VALUE" "$APP/Contents/Info.plist"
+
 IDENTITY="${SIGN_IDENTITY:--}"
 if [[ "$IDENTITY" == "-" ]]; then
   codesign --force --sign - "$APP"
