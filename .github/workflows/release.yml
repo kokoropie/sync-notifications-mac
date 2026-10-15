@@ -52,7 +52,22 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
           SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
           NOTIFICATION_SECRET: ${{ secrets.NOTIFICATION_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: ./build.sh
+
+      # Tùy chọn: có SENTRY_AUTH_TOKEN thì upload dSYM để crash report đọc được stack trace.
+      # Token chỉ dùng ở bước này, không đi vào app.
+      - name: Upload dSYM to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          [[ -n "$SENTRY_AUTH_TOKEN" ]] || { echo "Không có SENTRY_AUTH_TOKEN, bỏ qua"; exit 0; }
+          BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/NotificationMac"
+          dsymutil "$BIN" -o "$RUNNER_TEMP/NotificationMac.dSYM"
+          npm install -g @sentry/cli
+          sentry-cli debug-files upload "$RUNNER_TEMP/NotificationMac.dSYM"
 
       - name: Make DMG
         env:
