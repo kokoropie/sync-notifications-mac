@@ -9,3 +9,7 @@ build
 .gate-secret
 
 .DS_Store
+
+# Sentry DSN (build.sh đọc)
+.sentry-dsn
+.sentryclirc

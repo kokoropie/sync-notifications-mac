@@ -7,6 +7,7 @@ struct NotificationMacApp: App {
     @Environment(\.openWindow) private var openWindow
 
     init() {
+        CrashReporting.start()
         ServerClient.shared.start()
         Task { @MainActor in Updater.shared.checkOnLaunch() }
     }
