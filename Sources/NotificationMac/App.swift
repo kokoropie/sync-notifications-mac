@@ -39,6 +39,7 @@ struct NotificationMacApp: App {
             Button("Danh sách thông báo…") { show("history") }
             Divider()
             Button("Cài đặt…") { show("settings") }
+            Button("Gửi thông báo thử") { Notifier.shared.showTest() }
                 .keyboardShortcut(",")
             Button("Giới thiệu") { showAbout() }
             Button("Kiểm tra cập nhật…") { Task { await updater.check(userInitiated: true) } }

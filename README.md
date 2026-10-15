@@ -102,6 +102,7 @@ Cần Xcode (hoặc Command Line Tools) với Swift 5.9+.
 UNIVERSAL=1 ./build.sh          # cả arm64 + x86_64
 VERSION=1.0.0 ./scripts/make-dmg.sh   # build/SyncNotification-1.0.0.dmg
 open build/NotificationMac.app
+DEBUG=1 VERSION=1.0.0 ./build.sh   # build/NotificationMac-1.0.0-debug.app (bundle id .debug, chạy song song bản thường, không tự cập nhật)
 ```
 
 Biến tùy chọn cho `build.sh`: `VERSION`, `UNIVERSAL=1`, `SIGN_IDENTITY="Developer ID Application: …"` hoặc tên chứng chỉ tự ký.

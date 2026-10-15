@@ -33,6 +33,7 @@ final class Updater: ObservableObject {
 
     /// Gọi lúc khởi động: kiểm tra yên lặng tối đa mỗi 24 giờ, chỉ hiện hộp thoại khi có bản mới.
     func checkOnLaunch() {
+        if isDebugBuild { return }
         let d = UserDefaults.standard
         if d.object(forKey: Self.autoCheckKey) as? Bool == false { return }
         if Date().timeIntervalSince1970 - d.double(forKey: Self.lastCheckKey) < 86_400 { return }
@@ -48,8 +49,14 @@ final class Updater: ObservableObject {
         Notifier.shared.showUpdated(to: currentVersion)
     }
 
+    var isDebugBuild: Bool { Bundle.main.object(forInfoDictionaryKey: "IsDebugBuild") as? Bool == true }
+
     func check(userInitiated: Bool) async {
         guard !busy else { return }
+        if isDebugBuild {
+            if userInitiated { info("Bản debug không tự cập nhật", "Phiên bản \(currentVersion).") }
+            return
+        }
         busy = true
         defer { busy = false }
         do {
