@@ -119,6 +119,6 @@ Biến tùy chọn cho `build.sh`: `VERSION`, `UNIVERSAL=1`, `SIGN_IDENTITY="Dev
 - Cuộc gọi đến, cuộc gọi nhỡ.
 - **Danh sách thông báo**: lịch sử nhóm theo app, có tìm kiếm và xóa theo nhóm.
 - **Whitelist app**: chọn app được hiện banner; dùng chung với Android theo account key.
-- Clipboard hai chiều với Android.
+- Clipboard hai chiều với Android (chữ và ảnh; nếu clipboard có cả chữ lẫn ảnh thì gửi chữ).
 - **Tự cập nhật** từ GitHub Releases (menu bar → Kiểm tra cập nhật…), xem [Tự cập nhật](#tự-cập-nhật).
 - Nhận **thông báo thử** từ nút "Gửi thông báo thử sang Mac" trên Android để kiểm tra kết nối.

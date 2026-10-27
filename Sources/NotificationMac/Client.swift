@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import CryptoKit
 
 struct ServerEvent: Codable, Identifiable, Equatable {
     let kind: String
@@ -22,6 +23,9 @@ private struct WSMessage: Decodable {
     let kind: String
     let version: String?
     let text: String?
+    let type: String?
+    let hash: String?
+    let mime: String?
     let enabled: Bool?
     let packages: [String]?
 }
@@ -51,6 +55,8 @@ final class ServerClient: ObservableObject {
     private var pbTimer: Timer?
     private var lastChangeCount = NSPasteboard.general.changeCount
     private var lastSent: String?
+    private var lastImageHash: String? // ảnh vừa gửi / vừa nhận, chống vòng lặp
+    static let maxImageBytes = 10 * 1024 * 1024
 
     func start() {
         Notifier.shared.requestAuthorization()
@@ -153,7 +159,7 @@ final class ServerClient: ObservableObject {
         case "event":
             if let e = try? JSONDecoder().decode(ServerEvent.self, from: data) { deliver(e) }
         case "clipboard":
-            if let t = m.text { applyRemoteClipboard(t) }
+            if m.type == "image", let h = m.hash { fetchRemoteImage(h) } else if let t = m.text { applyRemoteClipboard(t) }
         case "whitelist":
             if !settings.whitelistDirty, let en = m.enabled { settings.applyRemoteWhitelist(enabled: en, packages: m.packages ?? []) }
         default: break
@@ -239,10 +245,17 @@ final class ServerClient: ObservableObject {
         let pb = NSPasteboard.general
         guard pb.changeCount != lastChangeCount else { return }
         lastChangeCount = pb.changeCount
-        guard settings.clipboardSync, connected, let text = pb.string(forType: .string), !text.isEmpty, text != lastSent else { return }
+        guard settings.clipboardSync, connected else { return }
         // bỏ qua nội dung đánh dấu bí mật (password manager)
         if pb.types?.contains(where: { $0.rawValue == "org.nspasteboard.ConcealedType" }) == true { return }
+        // có text thì ưu tiên text (Word/Pages copy chữ cũng kèm ảnh preview); chỉ có ảnh mới gửi ảnh
+        guard let text = pb.string(forType: .string), !text.isEmpty else {
+            if let raw = pb.data(forType: .png) ?? pb.data(forType: .tiff) { sendImage(raw) }
+            return
+        }
+        guard text != lastSent else { return }
         lastSent = text
+        lastImageHash = nil
         let payload = ["kind": "clipboard", "text": text]
         if let d = try? JSONSerialization.data(withJSONObject: payload), let s = String(data: d, encoding: .utf8) {
             sendFrame(s)
@@ -254,12 +267,58 @@ final class ServerClient: ObservableObject {
         task?.send(.data(Data(Kaga.encode(json, salt: Kaga.salt(for: settings.accountKey))))) { _ in }
     }
 
+    /// PNG/TIFF từ pasteboard -> PNG (quá lớn thì JPEG), upload qua HTTP; server báo hash cho các máy khác.
+    private func sendImage(_ raw: Data) {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self, let (data, mime) = Self.encodeImage(raw) else { return }
+            let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            DispatchQueue.main.async {
+                guard hash != self.lastImageHash, var req = self.request("api/clipboard/image", method: "POST") else { return }
+                self.lastImageHash = hash
+                self.lastSent = nil
+                req.setValue(mime, forHTTPHeaderField: "Content-Type")
+                URLSession.shared.uploadTask(with: req, from: data).resume()
+            }
+        }
+    }
+
+    private static func encodeImage(_ raw: Data) -> (Data, String)? {
+        if raw.starts(with: [0x89, 0x50, 0x4E, 0x47]), raw.count <= maxImageBytes { return (raw, "image/png") }
+        guard let rep = NSBitmapImageRep(data: raw) else { return nil }
+        if let png = rep.representation(using: .png, properties: [:]), png.count <= maxImageBytes { return (png, "image/png") }
+        for q in [0.85, 0.6] {
+            if let jpg = rep.representation(using: .jpeg, properties: [.compressionFactor: q]), jpg.count <= maxImageBytes { return (jpg, "image/jpeg") }
+        }
+        return nil
+    }
+
+    private func fetchRemoteImage(_ hash: String) {
+        guard settings.clipboardSync, hash != lastImageHash, let req = request("api/clipboard/image/\(hash)") else { return }
+        URLSession.shared.dataTask(with: req) { [weak self] data, resp, _ in
+            guard let self, let data, (resp as? HTTPURLResponse)?.statusCode == 200,
+                  let rep = NSBitmapImageRep(data: data), let tiff = rep.tiffRepresentation else { return }
+            let png = data.starts(with: [0x89, 0x50, 0x4E, 0x47]) ? data : rep.representation(using: .png, properties: [:])
+            DispatchQueue.main.async {
+                self.lastImageHash = hash // không gửi ngược lại
+                self.lastSent = nil
+                let item = NSPasteboardItem()
+                if let png { item.setData(png, forType: .png) }
+                item.setData(tiff, forType: .tiff)
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                pb.writeObjects([item])
+                self.lastChangeCount = pb.changeCount
+            }
+        }.resume()
+    }
+
     private func applyRemoteClipboard(_ text: String) {
         guard settings.clipboardSync else { return }
         DispatchQueue.main.async { [self] in
             let pb = NSPasteboard.general
             if pb.string(forType: .string) == text { return }
             self.lastSent = text // không gửi ngược lại
+            self.lastImageHash = nil
             pb.clearContents()
             pb.setString(text, forType: .string)
             self.lastChangeCount = pb.changeCount
@@ -271,8 +330,9 @@ final class ServerClient: ObservableObject {
         URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
             guard let self, let data,
                   let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let text = o["content"] as? String, o["sourceDevice"] as? String != self.settings.deviceId else { return }
-            self.applyRemoteClipboard(text)
+                  o["sourceDevice"] as? String != self.settings.deviceId else { return }
+            if o["type"] as? String == "image", let hash = o["hash"] as? String { return self.fetchRemoteImage(hash) }
+            if let text = o["content"] as? String, !text.isEmpty { self.applyRemoteClipboard(text) }
         }.resume()
     }
 }
